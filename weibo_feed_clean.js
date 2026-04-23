@@ -16,7 +16,8 @@ const RESIDUAL_AD_HOTWORDS = [
 ];
 const RESIDUAL_AD_KEYWORDS = [
   "\u591c\u5df4\u9ece",
-  "\u6d4e\u5357\u4f18\u5316\u516c\u79ef\u91d1\u8d37\u6b3e"
+  "\u6d4e\u5357\u4f18\u5316\u516c\u79ef\u91d1\u8d37\u6b3e",
+  "\u5e02\u76d1\u6240\u56de\u5e943\u53ea\u8001\u9f20\u5543\u98df\u751f\u9c7c"
 ];
 
 function isObject(value) {
@@ -260,6 +261,25 @@ function patchMblogData(data) {
     return;
   }
 
+  if (data.ad_tag_nature !== undefined) {
+    delete data.ad_tag_nature;
+  }
+
+  if (
+    data.title !== undefined &&
+    data.card_type === 101 &&
+    (
+      data.cate_id === "1121" ||
+      stringValue(data.itemid).indexOf("cate=1121") !== -1 ||
+      stringValue(data.analysis_extra).indexOf("cate=1121") !== -1
+    )
+  ) {
+    data.title = "";
+    if (data.desc !== undefined) {
+      data.desc = "";
+    }
+  }
+
   if (Array.isArray(data.topic_struct)) {
     data.topic_struct = [];
   }
@@ -295,6 +315,15 @@ function patchMblogData(data) {
   if (isObject(data.user)) {
     if (data.user.svip !== undefined) {
       data.user.svip = 0;
+    }
+    if (data.user.vvip !== undefined) {
+      data.user.vvip = 0;
+    }
+    if (data.user.mbrank !== undefined) {
+      data.user.mbrank = 0;
+    }
+    if (data.user.verified_reason !== undefined) {
+      data.user.verified_reason = "";
     }
 
     if (data.user.ability_tags !== undefined) {
