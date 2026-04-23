@@ -132,6 +132,10 @@ function isResidualHotwordAd(data) {
     return true;
   }
 
+  if (/cate_type:tongcheng/i.test(text) && /rawhot:0,0/i.test(text)) {
+    return true;
+  }
+
   for (let i = 0; i < RESIDUAL_AD_KEYWORDS.length; i++) {
     if (text.indexOf(RESIDUAL_AD_KEYWORDS[i]) !== -1) {
       return true;
@@ -139,6 +143,22 @@ function isResidualHotwordAd(data) {
   }
 
   return false;
+}
+
+function isFinderTopicHeaderCard(data) {
+  if (!isObject(data)) {
+    return false;
+  }
+
+  if (data.card_type !== 101) {
+    return false;
+  }
+
+  return (
+    data.cate_id === "1121" ||
+    stringValue(data.itemid).indexOf("cate=1121") !== -1 ||
+    stringValue(data.analysis_extra).indexOf("cate=1121") !== -1
+  );
 }
 
 function isAdData(data) {
@@ -166,6 +186,10 @@ function isAdData(data) {
   }
 
   if (isResidualHotwordAd(data)) {
+    return true;
+  }
+
+  if (isFinderTopicHeaderCard(data)) {
     return true;
   }
 
@@ -265,15 +289,7 @@ function patchMblogData(data) {
     delete data.ad_tag_nature;
   }
 
-  if (
-    data.title !== undefined &&
-    data.card_type === 101 &&
-    (
-      data.cate_id === "1121" ||
-      stringValue(data.itemid).indexOf("cate=1121") !== -1 ||
-      stringValue(data.analysis_extra).indexOf("cate=1121") !== -1
-    )
-  ) {
+  if (data.title !== undefined && isFinderTopicHeaderCard(data)) {
     data.title = "";
     if (data.desc !== undefined) {
       data.desc = "";
@@ -319,8 +335,20 @@ function patchMblogData(data) {
     if (data.user.vvip !== undefined) {
       data.user.vvip = 0;
     }
+    if (data.user.mbtype !== undefined) {
+      data.user.mbtype = 0;
+    }
     if (data.user.mbrank !== undefined) {
       data.user.mbrank = 0;
+    }
+    if (data.user.verified_type !== undefined) {
+      data.user.verified_type = 0;
+    }
+    if (data.user.verified_type_ext !== undefined) {
+      data.user.verified_type_ext = 0;
+    }
+    if (data.user.verified_detail !== undefined) {
+      data.user.verified_detail = {};
     }
     if (data.user.verified_reason !== undefined) {
       data.user.verified_reason = "";
