@@ -1,0 +1,50 @@
+[
+  {
+    "id": 34,
+    "name": "search_finder",
+    "endpoint": "api.weibo.cn/2/search/finder",
+    "rawLength": 293745,
+    "filteredLength": 165797,
+    "file": "034_search_finder_filtered.json"
+  },
+  {
+    "id": 86,
+    "name": "search_container_discover",
+    "endpoint": "api.weibo.cn/2/search/container_discover",
+    "rawLength": 114690,
+    "filteredLength": 88396,
+    "file": "086_search_container_discover_filtered.json"
+  },
+  {
+    "id": 94,
+    "name": "search_container_timeline",
+    "endpoint": "api.weibo.cn/2/search/container_timeline",
+    "rawLength": 271661,
+    "filteredLength": 219176,
+    "file": "094_search_container_timeline_filtered.json"
+  },
+  {
+    "id": 112,
+    "name": "statuses_container_detail_comment",
+    "endpoint": "api.weibo.cn/2/statuses/container_detail_comment",
+    "rawLength": 234371,
+    "filteredLength": 107385,
+    "file": "112_statuses_container_detail_comment_filtered.json"
+  },
+  {
+    "id": 113,
+    "name": "statuses_container_detail",
+    "endpoint": "api.weibo.cn/2/statuses/container_detail",
+    "rawLength": 38941,
+    "filteredLength": 26291,
+    "file": "113_statuses_container_detail_filtered.json"
+  },
+  {
+    "id": 125,
+    "name": "search_hot_word",
+    "endpoint": "api.weibo.cn/2/search_hot_word",
+    "rawLength": 19383,
+    "filteredLength": 17883,
+    "file": "125_search_hot_word_filtered.json"
+  }
+]

@@ -6,6 +6,14 @@ visible ad cards/posts while leaving normal posts and comments intact.
 */
 
 const AD_TEXT = "\u5e7f\u544a";
+const HOT_CHANNEL_TITLE = "\u70ed\u70b9";
+const COMMENT_TEXT = "\u8bc4\u8bba";
+const FOLLOW_TEXT = "\u5173\u6ce8";
+const RESIDUAL_AD_HOTWORDS = [
+  "\u4f59\u627f\u4e1c\u7206\u6599\u9e3f\u8499\u5ea7\u8231\u5c06\u8de8\u4ee3\u5347\u7ea7",
+  "\u5c1a\u754cZ7\u5927\u5b9a27\u5206\u949f\u783412000\u53f0",
+  "\u4e0a\u6c7d\u603b\u88c1\u9e3f\u8499\u667a\u884c\u53d1\u5e03\u4f1a\u5f55\u64ad"
+];
 
 function isObject(value) {
   return value && typeof value === "object" && !Array.isArray(value);
@@ -101,6 +109,15 @@ function isAdPromotion(promotion) {
   );
 }
 
+function isResidualHotwordAd(data) {
+  if (!isObject(data)) {
+    return false;
+  }
+
+  const title = stringValue(data.title_sub) || stringValue(data.title);
+  return RESIDUAL_AD_HOTWORDS.indexOf(title) !== -1;
+}
+
 function isAdData(data) {
   if (!isObject(data)) {
     return false;
@@ -121,7 +138,11 @@ function isAdData(data) {
     return true;
   }
 
-  if (data.itemid === "finder_window" || data.card_type === 118) {
+  if (data.itemid === "finder_window" || data.itemid === "finder_channel" || data.card_type === 118) {
+    return true;
+  }
+
+  if (isResidualHotwordAd(data)) {
     return true;
   }
 
@@ -212,13 +233,83 @@ function patchPagingParams(params) {
   }
 }
 
+function patchMblogData(data) {
+  if (!isObject(data)) {
+    return;
+  }
+
+  if (Array.isArray(data.buttons)) {
+    data.buttons = data.buttons.filter(function (button) {
+      if (!isObject(button)) {
+        return true;
+      }
+
+      return button.type !== "follow" && button.name !== FOLLOW_TEXT && button.title !== FOLLOW_TEXT;
+    });
+  }
+
+  if (Array.isArray(data.mblog_buttons)) {
+    data.mblog_buttons = data.mblog_buttons.filter(function (button) {
+      if (!isObject(button)) {
+        return false;
+      }
+
+      return (
+        stringValue(button.type).indexOf("comment") !== -1 ||
+        button.name === COMMENT_TEXT ||
+        button.title === COMMENT_TEXT
+      );
+    });
+  }
+
+  if (isObject(data.user)) {
+    if (data.user.ability_tags !== undefined) {
+      data.user.ability_tags = "";
+    }
+
+    if (Array.isArray(data.user.icons)) {
+      data.user.icons = data.user.icons.filter(function (icon) {
+        return !(isObject(icon) && icon.type === "vip");
+      });
+    }
+  }
+}
+
+function patchFinderChannelInfo(channelInfo) {
+  if (!isObject(channelInfo)) {
+    return;
+  }
+
+  if (isObject(channelInfo.channelConfig) && channelInfo.channelConfig.auto_refresh_config !== undefined) {
+    delete channelInfo.channelConfig.auto_refresh_config;
+  }
+
+  if (Array.isArray(channelInfo.channels) && channelInfo.channels.length > 1) {
+    let hotChannel = null;
+
+    for (let i = 0; i < channelInfo.channels.length; i++) {
+      if (channelInfo.channels[i] && channelInfo.channels[i].title === HOT_CHANNEL_TITLE) {
+        hotChannel = channelInfo.channels[i];
+        break;
+      }
+    }
+
+    channelInfo.channels = [hotChannel || channelInfo.channels[0]];
+  }
+}
+
 function patchMeta(node) {
   if (!isObject(node)) {
     return;
   }
 
+  patchMblogData(node);
+
   if (node.searchbar_exist_ad !== undefined) {
     node.searchbar_exist_ad = 0;
+  }
+  if (Array.isArray(node.searchBarContent)) {
+    node.searchBarContent = [];
   }
   if (node.foreground_req_preload !== undefined) {
     node.foreground_req_preload = false;
@@ -228,6 +319,9 @@ function patchMeta(node) {
   }
   if (isObject(node.params)) {
     patchPagingParams(node.params);
+  }
+  if (isObject(node.channelInfo)) {
+    patchFinderChannelInfo(node.channelInfo);
   }
 }
 
