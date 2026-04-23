@@ -14,6 +14,10 @@ const RESIDUAL_AD_HOTWORDS = [
   "\u5c1a\u754cZ7\u5927\u5b9a27\u5206\u949f\u783412000\u53f0",
   "\u4e0a\u6c7d\u603b\u88c1\u9e3f\u8499\u667a\u884c\u53d1\u5e03\u4f1a\u5f55\u64ad"
 ];
+const RESIDUAL_AD_KEYWORDS = [
+  "\u591c\u5df4\u9ece",
+  "\u6d4e\u5357\u4f18\u5316\u516c\u79ef\u91d1\u8d37\u6b3e"
+];
 
 function isObject(value) {
   return value && typeof value === "object" && !Array.isArray(value);
@@ -115,7 +119,25 @@ function isResidualHotwordAd(data) {
   }
 
   const title = stringValue(data.title_sub) || stringValue(data.title);
-  return RESIDUAL_AD_HOTWORDS.indexOf(title) !== -1;
+  const text = [
+    title,
+    stringValue(data.text),
+    stringValue(data.itemid),
+    stringValue(data.scheme),
+    isObject(data.action_log) ? stringValue(data.action_log.ext) : ""
+  ].join("|");
+
+  if (RESIDUAL_AD_HOTWORDS.indexOf(title) !== -1) {
+    return true;
+  }
+
+  for (let i = 0; i < RESIDUAL_AD_KEYWORDS.length; i++) {
+    if (text.indexOf(RESIDUAL_AD_KEYWORDS[i]) !== -1) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function isAdData(data) {
@@ -238,6 +260,14 @@ function patchMblogData(data) {
     return;
   }
 
+  if (Array.isArray(data.topic_struct)) {
+    data.topic_struct = [];
+  }
+
+  if (data.pic_bg_new !== undefined) {
+    data.pic_bg_new = "";
+  }
+
   if (Array.isArray(data.buttons)) {
     data.buttons = data.buttons.filter(function (button) {
       if (!isObject(button)) {
@@ -263,8 +293,16 @@ function patchMblogData(data) {
   }
 
   if (isObject(data.user)) {
+    if (data.user.svip !== undefined) {
+      data.user.svip = 0;
+    }
+
     if (data.user.ability_tags !== undefined) {
       data.user.ability_tags = "";
+    }
+
+    if (isObject(data.user.avatar_extend_info) && data.user.avatar_extend_info.pendant_url_new !== undefined) {
+      data.user.avatar_extend_info.pendant_url_new = "";
     }
 
     if (Array.isArray(data.user.icons)) {
@@ -310,6 +348,9 @@ function patchMeta(node) {
   }
   if (Array.isArray(node.searchBarContent)) {
     node.searchBarContent = [];
+  }
+  if (isObject(node.headerBack) && node.headerBack.channelStyleMap !== undefined) {
+    delete node.headerBack.channelStyleMap;
   }
   if (node.foreground_req_preload !== undefined) {
     node.foreground_req_preload = false;
