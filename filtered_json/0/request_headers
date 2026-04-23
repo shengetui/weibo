@@ -1,0 +1,18 @@
+POST /2/statuses/container_timeline_hot?flowId=232968&invokeType=manual&manualType=pull&pageDataType=feedStream&taskType=refresh&aid=01A_jAiQzR2s_NJ804Dx98J4FHjRy5AXFFZRUUKTiwsCwzflk.&b=0&c=iphone&dlang=zh-Hans-CN&from=10G4293010&ft=0&gsid=_2A25E7KIQDeRxGeFL7lIZ-CfIzTSIHXVlu7LYrDV6PUJbj9ANLWvgkWpNfen42iB8rRTKIyrcFbXqn43wys0JMfUn&lang=zh_CN&launchid=10000365--x&networktype=wifi&s=01e4ebea&sflag=1&skin=default&ua=iPhone18%2C4__weibo__16.4.2__iphone__os26.3.1&v_f=1&v_p=93&wm=3333_2001&ul_sid=D6C0B39D-A96C-40B2-93C4-62D2A0ED407F&ul_hid=632D0278-5F78-436A-B305-5EBF12DF9D7C&ul_ctime=1776918629252 HTTP/1.1
+Host: api.weibo.cn
+Connection: keep-alive
+Content-Length: 1336
+Content-Type: application/x-www-form-urlencoded; charset=utf-8
+SNRT: normal
+Authorization: WB-SUT _2A95E7KIQDeRxGeFL7lIZ-CfIzTSIHXVlu7LYrDV6PUJbj9ANLXfnkWpNfen42iS_6bMh4invzx0ujQM_KhRD-YkE
+X-Sessionid: 1C5A8F66-7AA2-4B74-BC87-DF2BD54F254B
+x-engine-type: cronet-114.0.5735.246
+x-shanhai-pass: 4.5Hkp3W2w0kkbLCcnzzmVlMw1fKo
+User-Agent: Weibo/99026 (iPhone; iOS 26.3.1; Scale/3.00)
+X-Log-Uid: 7550889468
+X-Validator: x5xwDZzO1HlQ0CkuwBtB8Cddyr+h6bJHgmaKxd3geuc=
+X-LOG-LEVEL: sla
+cronet_rid: 1541938
+Accept: */*
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en

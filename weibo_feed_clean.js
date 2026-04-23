@@ -135,6 +135,22 @@ function isAdPromotion(promotion) {
   );
 }
 
+function isFollowControl(item) {
+  if (!isObject(item)) {
+    return false;
+  }
+
+  return (
+    item.type === "follow" ||
+    item.type === "mblog_menus_follow" ||
+    item.type === "mblog_menus_special_follow" ||
+    item.type === "mblog_menus_unfollow" ||
+    item.type === "mblog_menus_remove_special_follow" ||
+    item.name === FOLLOW_TEXT ||
+    item.title === FOLLOW_TEXT
+  );
+}
+
 function isResidualHotwordAd(data) {
   if (!isObject(data)) {
     return false;
@@ -247,6 +263,10 @@ function shouldDropItem(item) {
     return false;
   }
 
+  if (isFollowControl(item)) {
+    return true;
+  }
+
   if (item.category === "ad" || item.type === "ad") {
     return true;
   }
@@ -331,11 +351,7 @@ function patchMblogData(data) {
 
   if (Array.isArray(data.buttons)) {
     data.buttons = data.buttons.filter(function (button) {
-      if (!isObject(button)) {
-        return true;
-      }
-
-      return button.type !== "follow" && button.name !== FOLLOW_TEXT && button.title !== FOLLOW_TEXT;
+      return !isFollowControl(button);
     });
   }
 
