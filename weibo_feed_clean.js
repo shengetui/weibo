@@ -19,6 +19,7 @@ const RESIDUAL_AD_KEYWORDS = [
   "\u6d4e\u5357\u4f18\u5316\u516c\u79ef\u91d1\u8d37\u6b3e",
   "\u5e02\u76d1\u6240\u56de\u5e943\u53ea\u8001\u9f20\u5543\u98df\u751f\u9c7c"
 ];
+let stripSocialActions = true;
 
 function isObject(value) {
   return value && typeof value === "object" && !Array.isArray(value);
@@ -325,6 +326,42 @@ function patchPagingParams(params) {
   }
 }
 
+function hasSocialActionFields(data) {
+  if (!isObject(data)) {
+    return false;
+  }
+
+  return (
+    data.reposts_count !== undefined ||
+    data.attitudes_count !== undefined ||
+    data.attitudes_status !== undefined ||
+    data.attitudes_animation !== undefined ||
+    Array.isArray(data.multi_attitude)
+  );
+}
+
+function makeCommentButton() {
+  return {
+    pic: "",
+    name: COMMENT_TEXT,
+    type: "mblog_buttons_comment"
+  };
+}
+
+function isDetailResponseRoot(json) {
+  if (!isObject(json)) {
+    return false;
+  }
+
+  if (isObject(json.detailInfo)) {
+    return true;
+  }
+
+  return Array.isArray(json.items) && json.items.some(function (item) {
+    return isObject(item) && item.category === "detail";
+  });
+}
+
 function patchMblogData(data) {
   if (!isObject(data)) {
     return;
@@ -349,6 +386,39 @@ function patchMblogData(data) {
     data.pic_bg_new = "";
   }
 
+  if (stripSocialActions) {
+    if (data.reposts_count !== undefined) {
+      data.reposts_count = 0;
+    }
+    if (data.attitudes_count !== undefined) {
+      data.attitudes_count = 0;
+    }
+    if (data.like_counts !== undefined) {
+      data.like_counts = 0;
+    }
+    if (data.attitudes_status !== undefined) {
+      data.attitudes_status = 0;
+    }
+    if (data.attitudes_animation !== undefined) {
+      data.attitudes_animation = 0;
+    }
+    if (data.most_attitude_type !== undefined) {
+      data.most_attitude_type = 0;
+    }
+    if (data.can_reprint !== undefined) {
+      data.can_reprint = false;
+    }
+    if (data.liked !== undefined) {
+      data.liked = false;
+    }
+    if (data.like_video_animation !== undefined) {
+      delete data.like_video_animation;
+    }
+    if (Array.isArray(data.multi_attitude)) {
+      data.multi_attitude = [];
+    }
+  }
+
   if (Array.isArray(data.buttons)) {
     data.buttons = data.buttons.filter(function (button) {
       return !isFollowControl(button);
@@ -367,6 +437,8 @@ function patchMblogData(data) {
         button.title === COMMENT_TEXT
       );
     });
+  } else if (stripSocialActions && hasSocialActionFields(data) && data.comments_count !== undefined) {
+    data.mblog_buttons = [makeCommentButton()];
   }
 
   if (isObject(data.user)) {
@@ -488,6 +560,7 @@ function cleanNode(node) {
 
 function cleanWeiboBody(bodyText) {
   const json = JSON.parse(bodyText);
+  stripSocialActions = !isDetailResponseRoot(json);
   return JSON.stringify(cleanNode(json));
 }
 
