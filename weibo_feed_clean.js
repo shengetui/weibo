@@ -20,6 +20,7 @@ const RESIDUAL_AD_KEYWORDS = [
   "\u5e02\u76d1\u6240\u56de\u5e943\u53ea\u8001\u9f20\u5543\u98df\u751f\u9c7c"
 ];
 let stripSocialActions = true;
+let isDetailResponse = false;
 
 function isObject(value) {
   return value && typeof value === "object" && !Array.isArray(value);
@@ -506,6 +507,31 @@ function patchFinderChannelInfo(channelInfo) {
   }
 }
 
+function patchDetailChannelInfo(channelInfo) {
+  if (!isObject(channelInfo) || !Array.isArray(channelInfo.channels)) {
+    return;
+  }
+
+  let commentChannel = null;
+
+  for (let i = 0; i < channelInfo.channels.length; i++) {
+    const channel = channelInfo.channels[i];
+    if (
+      channel &&
+      (channel.title === COMMENT_TEXT ||
+        channel.flowId === "comment" ||
+        channel.apiPath === "statuses/container_detail_comment")
+    ) {
+      commentChannel = channel;
+      break;
+    }
+  }
+
+  if (commentChannel) {
+    channelInfo.channels = [commentChannel];
+  }
+}
+
 function patchMeta(node) {
   if (!isObject(node)) {
     return;
@@ -532,7 +558,11 @@ function patchMeta(node) {
     patchPagingParams(node.params);
   }
   if (isObject(node.channelInfo)) {
-    patchFinderChannelInfo(node.channelInfo);
+    if (isDetailResponse) {
+      patchDetailChannelInfo(node.channelInfo);
+    } else {
+      patchFinderChannelInfo(node.channelInfo);
+    }
   }
 }
 
@@ -560,7 +590,8 @@ function cleanNode(node) {
 
 function cleanWeiboBody(bodyText) {
   const json = JSON.parse(bodyText);
-  stripSocialActions = !isDetailResponseRoot(json);
+  isDetailResponse = isDetailResponseRoot(json);
+  stripSocialActions = !isDetailResponse;
   return JSON.stringify(cleanNode(json));
 }
 
