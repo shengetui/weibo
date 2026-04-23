@@ -1,0 +1,270 @@
+/*
+Weibo feed ad cleaner for Quantumult X.
+
+Use this script as script-response-body on Weibo JSON feed endpoints. It removes
+visible ad cards/posts while leaving normal posts and comments intact.
+*/
+
+const AD_TEXT = "\u5e7f\u544a";
+
+function isObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringValue(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
+}
+
+function textHasAdMarker(text) {
+  if (!text) {
+    return false;
+  }
+
+  return (
+    /(?:^|[|&?])adid(?::|=|%3D)\d+/i.test(text) ||
+    /(?:^|[|&?])ads_word:/i.test(text) ||
+    /(?:^|[|&?])cate_type:ads_hotword/i.test(text) ||
+    /(?:^|[|&?])is_ad_pos(?::|=|%3D)1/i.test(text) ||
+    /(?:^|[|&?])source(?::|=|%3D)is_ad/i.test(text) ||
+    /(?:^|[|&?])source:ad(?:$|[|&])/i.test(text) ||
+    /(?:^|[|&?])topic_ad(?:=|%3D)1/i.test(text) ||
+    /reallog_mark_ad/i.test(text) ||
+    /ad_video_/i.test(text) ||
+    /third_party_monitor_url/i.test(text) ||
+    /kadmimage\.biz\.weibo\.com/i.test(text) ||
+    /ad\.us\.sinaimg\.cn/i.test(text)
+  );
+}
+
+function actionLogText(data) {
+  const parts = [];
+
+  if (!isObject(data)) {
+    return "";
+  }
+
+  parts.push(stringValue(data.itemid));
+  parts.push(stringValue(data.analysis_extra));
+  parts.push(stringValue(data.scheme));
+  parts.push(stringValue(data.ext));
+  parts.push(stringValue(data.mark));
+  parts.push(stringValue(data.readtimetype));
+
+  if (isObject(data.action_log)) {
+    parts.push(stringValue(data.action_log.ext));
+  }
+  if (isObject(data.actionlog)) {
+    parts.push(stringValue(data.actionlog.ext));
+  }
+  if (isObject(data.video_actionlog)) {
+    parts.push(stringValue(data.video_actionlog.ext));
+    parts.push(stringValue(data.video_actionlog.mark));
+    parts.push(stringValue(data.video_actionlog.source));
+  }
+  if (isObject(data.page_info) && isObject(data.page_info.ad_click_actionlog)) {
+    parts.push("ad_click_actionlog");
+    parts.push(stringValue(data.page_info.ad_click_actionlog.ext));
+    parts.push(stringValue(data.page_info.ad_click_actionlog.mark));
+    parts.push(stringValue(data.page_info.ad_click_actionlog.source));
+  }
+  if (isObject(data.ad_videoinfo)) {
+    parts.push("ad_videoinfo");
+  }
+  if (isObject(data.corner_mark_data)) {
+    parts.push(stringValue(data.corner_mark_data.title));
+  }
+
+  return parts.join("|");
+}
+
+function isAdPromotion(promotion) {
+  if (!isObject(promotion)) {
+    return false;
+  }
+
+  return (
+    promotion.type === "ad" ||
+    promotion.recommend === AD_TEXT ||
+    promotion.adtype !== undefined ||
+    promotion.ad_tag !== undefined ||
+    Array.isArray(promotion.monitor_url) ||
+    textHasAdMarker(actionLogText(promotion))
+  );
+}
+
+function isAdData(data) {
+  if (!isObject(data)) {
+    return false;
+  }
+
+  if (
+    data.is_ad === 1 ||
+    data.is_ad === true ||
+    data.ad_state === 1 ||
+    data.insert_ad_feed === 1 ||
+    data.adType !== undefined ||
+    data.adid !== undefined
+  ) {
+    return true;
+  }
+
+  if (data.mblogtypename === AD_TEXT || data.readtimetype === "adMblog") {
+    return true;
+  }
+
+  if (data.itemid === "finder_window" || data.card_type === 118) {
+    return true;
+  }
+
+  if (data.card_type === 17 && Array.isArray(data.group) && data.group.length === 0) {
+    return true;
+  }
+
+  if (
+    isObject(data.ad_object) ||
+    isObject(data.ad_actionlogs) ||
+    isObject(data.ad_videoinfo) ||
+    isObject(data.page_info && data.page_info.ad_click_actionlog)
+  ) {
+    return true;
+  }
+
+  if (isObject(data.corner_mark_data) && data.corner_mark_data.title === AD_TEXT) {
+    return true;
+  }
+
+  if (isAdPromotion(data.promotion)) {
+    return true;
+  }
+
+  return textHasAdMarker(actionLogText(data));
+}
+
+function shouldDropItem(item) {
+  if (!isObject(item)) {
+    return false;
+  }
+
+  if (item.category === "ad" || item.type === "ad") {
+    return true;
+  }
+
+  if (item.commentAdType !== undefined || item.commentAdSubType !== undefined) {
+    return true;
+  }
+
+  if (item.category === "group" && Array.isArray(item.items) && item.items.length === 0) {
+    return true;
+  }
+
+  if (isAdData(item.data)) {
+    return true;
+  }
+
+  if (!item.data && isAdData(item)) {
+    return true;
+  }
+
+  return false;
+}
+
+function cleanArray(items) {
+  const result = [];
+
+  items.forEach(function (item) {
+    const cleaned = cleanNode(item);
+    if (!shouldDropItem(cleaned)) {
+      result.push(cleaned);
+    }
+  });
+
+  return result;
+}
+
+function patchPagingParams(params) {
+  if (!isObject(params)) {
+    return;
+  }
+
+  if (params.preAdInterval !== undefined) {
+    params.preAdInterval = 999;
+  }
+  if (params.lastAdInterval !== undefined) {
+    params.lastAdInterval = 999;
+  }
+  if (params.adInterval !== undefined) {
+    params.adInterval = 999;
+  }
+  if (params.need_ad !== undefined) {
+    params.need_ad = 0;
+  }
+  if (params.insert_ad !== undefined) {
+    params.insert_ad = 0;
+  }
+}
+
+function patchMeta(node) {
+  if (!isObject(node)) {
+    return;
+  }
+
+  if (node.searchbar_exist_ad !== undefined) {
+    node.searchbar_exist_ad = 0;
+  }
+  if (node.foreground_req_preload !== undefined) {
+    node.foreground_req_preload = false;
+  }
+  if (node.last_ad_show_interval !== undefined) {
+    node.last_ad_show_interval = 86400;
+  }
+  if (isObject(node.params)) {
+    patchPagingParams(node.params);
+  }
+}
+
+function cleanNode(node) {
+  if (Array.isArray(node)) {
+    return cleanArray(node);
+  }
+
+  if (!isObject(node)) {
+    return node;
+  }
+
+  Object.keys(node).forEach(function (key) {
+    const value = node[key];
+    if (Array.isArray(value)) {
+      node[key] = cleanArray(value);
+    } else if (isObject(value)) {
+      node[key] = cleanNode(value);
+    }
+  });
+
+  patchMeta(node);
+  return node;
+}
+
+function cleanWeiboBody(bodyText) {
+  const json = JSON.parse(bodyText);
+  return JSON.stringify(cleanNode(json));
+}
+
+if (typeof $done === "function") {
+  const body = (typeof $response !== "undefined" && $response && $response.body) || "";
+
+  try {
+    $done({ body: cleanWeiboBody(body) });
+  } catch (error) {
+    console.log("weibo_feed_clean error: " + error);
+    $done({ body: body });
+  }
+}
