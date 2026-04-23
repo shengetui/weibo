@@ -99,6 +99,27 @@ function actionLogText(data) {
   return parts.join("|");
 }
 
+function getLogField(text, key) {
+  if (!text) {
+    return "";
+  }
+
+  const match = text.match(new RegExp("(?:^|[|&?])" + key + ":([^|&]*)", "i"));
+  return match ? match[1] : "";
+}
+
+function isFinderInjectedHotword(data) {
+  const text = actionLogText(data);
+  const cateType = getLogField(text, "cate_type").toLowerCase();
+
+  return (
+    cateType !== "" &&
+    cateType !== "hotword" &&
+    /(?:^|[|&?])mod_src:s_finder(?:$|[|&])/i.test(text) &&
+    /(?:^|[|&?])hot_word:/i.test(text)
+  );
+}
+
 function isAdPromotion(promotion) {
   if (!isObject(promotion)) {
     return false;
@@ -129,6 +150,10 @@ function isResidualHotwordAd(data) {
   ].join("|");
 
   if (RESIDUAL_AD_HOTWORDS.indexOf(title) !== -1) {
+    return true;
+  }
+
+  if (isFinderInjectedHotword(data)) {
     return true;
   }
 
