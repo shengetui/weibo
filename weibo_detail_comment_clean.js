@@ -8,6 +8,7 @@ comment likes, replies, and the detail page's own comment entry.
 
 const AD_TEXT = "\u5e7f\u544a";
 const FOLLOW_TEXT = "\u5173\u6ce8";
+const DETAIL_SEARCH_HINT = "\u5927\u5bb6\u90fd\u5728\u641c";
 
 function isObject(value) {
   return value && typeof value === "object" && !Array.isArray(value);
@@ -169,6 +170,40 @@ function isFollowControl(item) {
   );
 }
 
+function isRewardOrFollowMenu(item) {
+  if (!isObject(item)) {
+    return false;
+  }
+
+  return (
+    isFollowControl(item) ||
+    item.type === "mblog_menus_open_reward" ||
+    item.type === "mblog_menus_close_reward" ||
+    item.type === "vip_like_animation"
+  );
+}
+
+function isFollowCompletionAction(action) {
+  if (!isObject(action)) {
+    return false;
+  }
+
+  return (
+    action.btn_code === 1009 ||
+    (action.type === 6 && isObject(action.ext) && (action.ext.uid !== undefined || action.ext.followers_count !== undefined))
+  );
+}
+
+function isDetailSearchCard(item) {
+  if (!isObject(item)) {
+    return false;
+  }
+
+  const data = isObject(item.data) ? item.data : item;
+
+  return data.card_type === 248 || data.itemid === "top_searching" || data.hint === DETAIL_SEARCH_HINT;
+}
+
 function shouldDropItem(item) {
   if (!isObject(item)) {
     return false;
@@ -178,6 +213,7 @@ function shouldDropItem(item) {
     isFollowControl(item) ||
     item.category === "ad" ||
     item.type === "ad" ||
+    isDetailSearchCard(item) ||
     item.commentAdType !== undefined ||
     item.commentAdSubType !== undefined ||
     isAdData(item.data) ||
@@ -251,12 +287,49 @@ function patchNode(node) {
   if (node.pic_bg_new !== undefined) {
     node.pic_bg_new = "";
   }
+  if (node.voice !== undefined) {
+    delete node.voice;
+  }
+  if (node.detail_top_right_button !== undefined) {
+    delete node.detail_top_right_button;
+  }
+  if (node.ai_search_share !== undefined) {
+    delete node.ai_search_share;
+  }
+  if (node.reward_info !== undefined) {
+    delete node.reward_info;
+  }
+  if (node.reward_scheme !== undefined) {
+    delete node.reward_scheme;
+  }
+  if (node.reward_exhibition_type !== undefined) {
+    node.reward_exhibition_type = 0;
+  }
+  if (node.follow_data !== undefined) {
+    delete node.follow_data;
+  }
+  if (node.is_show_follow_remind !== undefined) {
+    node.is_show_follow_remind = 0;
+  }
+  if (node.show_follow_remind_delay !== undefined) {
+    node.show_follow_remind_delay = 0;
+  }
   if (Array.isArray(node.topic_struct)) {
     node.topic_struct = [];
   }
   if (Array.isArray(node.buttons)) {
     node.buttons = node.buttons.filter(function (button) {
       return !isFollowControl(button);
+    });
+  }
+  if (Array.isArray(node.custom_action_list)) {
+    node.custom_action_list = node.custom_action_list.filter(function (action) {
+      return !isRewardOrFollowMenu(action);
+    });
+  }
+  if (Array.isArray(node.play_completion_actions)) {
+    node.play_completion_actions = node.play_completion_actions.filter(function (action) {
+      return !isFollowCompletionAction(action);
     });
   }
   if (isObject(node.user)) {

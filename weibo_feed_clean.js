@@ -9,6 +9,7 @@ const AD_TEXT = "\u5e7f\u544a";
 const HOT_CHANNEL_TITLE = "\u70ed\u70b9";
 const COMMENT_TEXT = "\u8bc4\u8bba";
 const FOLLOW_TEXT = "\u5173\u6ce8";
+const DETAIL_SEARCH_HINT = "\u5927\u5bb6\u90fd\u5728\u641c";
 const RESIDUAL_AD_HOTWORDS = [
   "\u4f59\u627f\u4e1c\u7206\u6599\u9e3f\u8499\u5ea7\u8231\u5c06\u8de8\u4ee3\u5347\u7ea7",
   "\u5c1a\u754cZ7\u5927\u5b9a27\u5206\u949f\u783412000\u53f0",
@@ -153,6 +154,30 @@ function isFollowControl(item) {
   );
 }
 
+function isRewardOrFollowMenu(item) {
+  if (!isObject(item)) {
+    return false;
+  }
+
+  return (
+    isFollowControl(item) ||
+    item.type === "mblog_menus_open_reward" ||
+    item.type === "mblog_menus_close_reward" ||
+    item.type === "vip_like_animation"
+  );
+}
+
+function isFollowCompletionAction(action) {
+  if (!isObject(action)) {
+    return false;
+  }
+
+  return (
+    action.btn_code === 1009 ||
+    (action.type === 6 && isObject(action.ext) && (action.ext.uid !== undefined || action.ext.followers_count !== undefined))
+  );
+}
+
 function isResidualHotwordAd(data) {
   if (!isObject(data)) {
     return false;
@@ -202,6 +227,16 @@ function isFinderTopicHeaderCard(data) {
     stringValue(data.itemid).indexOf("cate=1121") !== -1 ||
     stringValue(data.analysis_extra).indexOf("cate=1121") !== -1
   );
+}
+
+function isDetailSearchCard(item) {
+  if (!isObject(item)) {
+    return false;
+  }
+
+  const data = isObject(item.data) ? item.data : item;
+
+  return data.card_type === 248 || data.itemid === "top_searching" || data.hint === DETAIL_SEARCH_HINT;
 }
 
 function isAdData(data) {
@@ -266,6 +301,10 @@ function shouldDropItem(item) {
   }
 
   if (isFollowControl(item)) {
+    return true;
+  }
+
+  if (isDetailSearchCard(item)) {
     return true;
   }
 
@@ -383,6 +422,34 @@ function patchMblogData(data) {
     data.topic_struct = [];
   }
 
+  if (data.voice !== undefined) {
+    delete data.voice;
+  }
+  if (data.detail_top_right_button !== undefined) {
+    delete data.detail_top_right_button;
+  }
+  if (data.ai_search_share !== undefined) {
+    delete data.ai_search_share;
+  }
+  if (data.reward_info !== undefined) {
+    delete data.reward_info;
+  }
+  if (data.reward_scheme !== undefined) {
+    delete data.reward_scheme;
+  }
+  if (data.reward_exhibition_type !== undefined) {
+    data.reward_exhibition_type = 0;
+  }
+  if (data.follow_data !== undefined) {
+    delete data.follow_data;
+  }
+  if (data.is_show_follow_remind !== undefined) {
+    data.is_show_follow_remind = 0;
+  }
+  if (data.show_follow_remind_delay !== undefined) {
+    data.show_follow_remind_delay = 0;
+  }
+
   if (data.pic_bg_new !== undefined) {
     data.pic_bg_new = "";
   }
@@ -423,6 +490,18 @@ function patchMblogData(data) {
   if (Array.isArray(data.buttons)) {
     data.buttons = data.buttons.filter(function (button) {
       return !isFollowControl(button);
+    });
+  }
+
+  if (Array.isArray(data.custom_action_list)) {
+    data.custom_action_list = data.custom_action_list.filter(function (action) {
+      return !isRewardOrFollowMenu(action);
+    });
+  }
+
+  if (Array.isArray(data.play_completion_actions)) {
+    data.play_completion_actions = data.play_completion_actions.filter(function (action) {
+      return !isFollowCompletionAction(action);
     });
   }
 
